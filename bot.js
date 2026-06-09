@@ -21,8 +21,7 @@ async function startBot() {
 
         sock = makeWASocket({
             auth: state,
-            printQRInTerminal: true,
-            logger: require('@whiskeysockets/baileys/lib/Utils').default({ level: 'silent' })
+            printQRInTerminal: true
         });
 
         sock.ev.on('connection.update', (update) => {
@@ -212,9 +211,9 @@ app.get('/info', (req, res) => {
 });
 
 // START SERVER
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n✅ Store Server running on port ${PORT}`);
     console.log(`🌐 Store URL: http://localhost:${PORT}`);
     console.log(`\n⏳ Starting WhatsApp Bot...\n`);
