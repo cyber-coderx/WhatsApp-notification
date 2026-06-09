@@ -136,10 +136,19 @@ app.post('/api/settings', (req, res) => {
         return res.status(403).json({ success: false, error: 'WhatsApp is currently connected. Reset first to change the number.' });
     }
     const { ownerPhone } = req.body;
-    if (!ownerPhone || ownerPhone.trim().length < 7) {
+    const cleaned = (ownerPhone || '').trim().replace(/^\+/, '').replace(/\s+/g, '');
+
+    if (!cleaned || cleaned.length < 7) {
         return res.status(400).json({ success: false, error: 'Please enter a valid phone number.' });
     }
-    OWNER_PHONE = ownerPhone.trim().replace(/^\+/, '');
+    if (cleaned.startsWith('0')) {
+        return res.status(400).json({ success: false, error: 'Number must be in international format — remove the leading 0 and add your country code. Example: 233509632197 for Ghana.' });
+    }
+    if (cleaned.length < 10) {
+        return res.status(400).json({ success: false, error: 'Number looks too short. Make sure to include your country code (e.g. 233 for Ghana).' });
+    }
+
+    OWNER_PHONE = cleaned;
     console.log(`✅ Owner phone updated to: ${OWNER_PHONE}`);
     res.json({ success: true, ownerPhone: OWNER_PHONE });
 });
@@ -254,8 +263,19 @@ async function sendOwnerNotification(order) {
         return false;
     }
 
+    if (!OWNER_PHONE) {
+        console.log('⚠️ OWNER_PHONE is not set — cannot send notification. Set it in the Owner Dashboard.');
+        return false;
+    }
+
+    if (OWNER_PHONE.startsWith('0')) {
+        console.log(`❌ OWNER_PHONE "${OWNER_PHONE}" starts with 0 — must be international format (e.g. 233509632197)`);
+        return false;
+    }
+
     try {
         const formattedPhone = OWNER_PHONE.includes('@') ? OWNER_PHONE : `${OWNER_PHONE}@s.whatsapp.net`;
+        console.log(`📤 Sending notification to: ${formattedPhone}`);
         const message = `🛒 *NEW ORDER RECEIVED!*\n\n📦 Product: ${order.product}\n👤 Customer: ${order.customerName}\n📞 Phone: ${order.phone}\n📊 Quantity: ${order.quantity}\n💰 Price Each: $${order.price}\n💵 Total: $${order.total}\n\n✅ Order ID: ${order.id}\n🕐 Time: ${new Date(order.timestamp).toLocaleString()}\n\nThank you for your business! 🙏`;
 
         await sock.sendMessage(formattedPhone, { text: message });
