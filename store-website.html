@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Store - Buy Products</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .navbar {
+            background: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar h1 {
+            color: #667eea;
+            font-size: 24px;
+        }
+
+        .navbar a {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .navbar a:hover {
+            background: #764ba2;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .product-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+        }
+
+        .product-info {
+            padding: 20px;
+        }
+
+        .product-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .product-description {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .product-price {
+            font-size: 28px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .buy-button {
+            width: 100%;
+            padding: 14px;
+            background: #25D366;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .buy-button:hover {
+            background: #20BA5A;
+        }
+
+        .buy-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .stats-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .orders-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .orders-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .order-item {
+            background: #f9f9f9;
+            padding: 15px;
+            border-left: 4px solid #25D366;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+        .order-item-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .order-item-name {
+            color: #333;
+        }
+
+        .order-item-price {
+            color: #25D366;
+            font-weight: bold;
+        }
+
+        .order-item-customer {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .order-item-status {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-content h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-confirm {
+            background: #25D366;
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            background: #20BA5A;
+        }
+
+        .btn-cancel {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-cancel:hover {
+            background: #d0d0d0;
+        }
+
+        .message {
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .message.success {
+            display: block;
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            display: block;
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <div class="navbar">
+        <h1>🛒 My Store</h1>
+        <a href="#owner-dashboard">Owner Dashboard</a>
+    </div>
+
+    <div class="container">
+        <!-- Products Section -->
+        <div>
+            <h2 style="color: white; margin-bottom: 30px; text-align: center;">📦 Available Products</h2>
+            <div class="products-grid" id="productsGrid">
+                <!-- Products will load here -->
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="stats-panel" id="owner-dashboard" style="display: none;">
+            <h2 style="color: #333; margin-bottom: 20px;">📊 Owner Dashboard</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalOrders">0</div>
+                    <div class="stat-label">Total Orders</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalRevenue">$0</div>
+                    <div class="stat-label">Total Revenue</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="todayRevenue">$0</div>
+                    <div class="stat-label">Today's Revenue</div>
+                </div>
+            </div>
+
+            <div class="orders-section">
+                <h2>Recent Orders</h2>
+                <div id="ordersList">
+                    <div class="empty-state">📭 No orders yet</div>
+                </div>
+            </div>
+
+            <button onclick="toggleDashboard()" style="
+                width: 100%;
+                padding: 12px;
+                background: #667eea;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-weight: bold;
+                cursor: pointer;
+                margin-top: 20px;
+            ">Back to Store</button>
+        </div>
+    </div>
+
+    <!-- Buy Modal -->
+    <div id="buyModal" class="modal">
+        <div class="modal-content">
+            <h2>Complete Purchase</h2>
+            <p id="modalProductName" style="color: #666; margin-bottom: 20px;"></p>
+            
+            <div class="form-group">
+                <label>Your Name</label>
+                <input type="text" id="customerName" placeholder="John Doe">
+            </div>
+
+            <div class="form-group">
+                <label>Your WhatsApp Number</label>
+                <input type="tel" id="customerPhone" placeholder="+1 (555) 123-4567">
+            </div>
+
+            <div class="form-group">
+                <label>Quantity</label>
+                <input type="number" id="quantity" value="1" min="1">
+            </div>
+
+            <p id="totalPrice" style="color: #667eea; font-weight: bold; margin: 20px 0; font-size: 18px;"></p>
+
+            <div id="message"></div>
+
+            <div class="modal-buttons">
+                <button class="btn-confirm" onclick="completePurchase()">
+                    ✅ Complete Purchase
+                </button>
+                <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Products
+        const products = [
+            { id: 1, name: 'Product A', price: 29.99, emoji: '📱', description: 'High quality item' },
+            { id: 2, name: 'Product B', price: 49.99, emoji: '💻', description: 'Premium version' },
+            { id: 3, name: 'Product C', price: 19.99, emoji: '🎮', description: 'Basic item' },
+            { id: 4, name: 'Product D', price: 99.99, emoji: '⌚', description: 'Deluxe edition' }
+        ];
+
+        let orders = [];
+        let currentProduct = null;
+
+        // Load products
+        function loadProducts() {
+            const grid = document.getElementById('productsGrid');
+            grid.innerHTML = products.map(p => `
+                <div class="product-card">
+                    <div class="product-image">${p.emoji}</div>
+                    <div class="product-info">
+                        <div class="product-name">${p.name}</div>
+                        <div class="product-description">${p.description}</div>
+                        <div class="product-price">$${p.price.toFixed(2)}</div>
+                        <button class="buy-button" onclick="openBuyModal(${p.id})">
+                            🛒 Buy Now
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Open buy modal
+        function openBuyModal(productId) {
+            currentProduct = products.find(p => p.id === productId);
+            document.getElementById('modalProductName').textContent = `Product: ${currentProduct.name} - $${currentProduct.price.toFixed(2)}`;
+            document.getElementById('quantity').value = '1';
+            document.getElementById('customerName').value = '';
+            document.getElementById('customerPhone').value = '';
+            updateTotalPrice();
+            document.getElementById('buyModal').classList.add('active');
+            document.getElementById('message').innerHTML = '';
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('buyModal').classList.remove('active');
+        }
+
+        // Update total price
+        function updateTotalPrice() {
+            const qty = parseInt(document.getElementById('quantity').value) || 1;
+            const total = (currentProduct.price * qty).toFixed(2);
+            document.getElementById('totalPrice').textContent = `Total: $${total}`;
+        }
+
+        document.getElementById('quantity').addEventListener('change', updateTotalPrice);
+
+        // Complete purchase
+        async function completePurchase() {
+            const name = document.getElementById('customerName').value;
+            const phone = document.getElementById('customerPhone').value;
+            const qty = parseInt(document.getElementById('quantity').value);
+
+            if (!name || !phone || !qty) {
+                showMessage('Please fill all fields', 'error');
+                return;
+            }
+
+            const total = (currentProduct.price * qty).toFixed(2);
+
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = '⏳ Processing...';
+
+            try {
+                // Send order to backend
+                const response = await fetch('/api/order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customerName: name,
+                        phone,
+                        product: currentProduct.name,
+                        quantity: qty,
+                        price: currentProduct.price,
+                        total
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('✅ Purchase successful! WhatsApp notification sent to owner.', 'success');
+                    
+                    // Add to local orders
+                    orders.push({
+                        id: data.orderId,
+                        product: currentProduct.name,
+                        quantity: qty,
+                        total: parseFloat(total),
+                        customer: name,
+                        phone,
+                        timestamp: new Date(),
+                        status: '✅ WhatsApp Sent'
+                    });
+
+                    setTimeout(() => {
+                        closeModal();
+                        loadProducts();
+                        button.disabled = false;
+                        button.textContent = '✅ Complete Purchase';
+                    }, 2000);
+                } else {
+                    showMessage('❌ Error: ' + (data.error || 'Unknown error'), 'error');
+                    button.disabled = false;
+                    button.textContent = '✅ Complete Purchase';
+                }
+            } catch (error) {
+                showMessage('❌ Error: ' + error.message, 'error');
+                button.disabled = false;
+                button.textContent = '✅ Complete Purchase';
+            }
+        }
+
+        // Show message
+        function showMessage(text, type) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = `message ${type}`;
+        }
+
+        // Toggle dashboard
+        function toggleDashboard() {
+            const dashboard = document.getElementById('owner-dashboard');
+            dashboard.style.display = dashboard.style.display === 'none' ? 'block' : 'none';
+            
+            if (dashboard.style.display === 'block') {
+                updateDashboard();
+            }
+        }
+
+        // Update dashboard
+        function updateDashboard() {
+            document.getElementById('totalOrders').textContent = orders.length;
+            
+            const totalRev = orders.reduce((sum, o) => sum + o.total, 0).toFixed(2);
+            document.getElementById('totalRevenue').textContent = '$' + totalRev;
+
+            const today = new Date().toDateString();
+            const todayRev = orders
+                .filter(o => new Date(o.timestamp).toDateString() === today)
+                .reduce((sum, o) => sum + o.total, 0)
+                .toFixed(2);
+            document.getElementById('todayRevenue').textContent = '$' + todayRev;
+
+            const ordersList = document.getElementById('ordersList');
+            if (orders.length === 0) {
+                ordersList.innerHTML = '<div class="empty-state">📭 No orders yet</div>';
+                return;
+            }
+
+            ordersList.innerHTML = orders.map(o => `
+                <div class="order-item">
+                    <div class="order-item-header">
+                        <span class="order-item-name">${o.product}</span>
+                        <span class="order-item-price">$${o.total}</span>
+                    </div>
+                    <div class="order-item-customer">👤 ${o.customer}</div>
+                    <div class="order-item-customer">📦 Qty: ${o.quantity}</div>
+                    <div class="order-item-status">${o.status}</div>
+                </div>
+            `).join('');
+        }
+
+        // Initialize
+        loadProducts();
+    </script>
+</body>
+</html>
