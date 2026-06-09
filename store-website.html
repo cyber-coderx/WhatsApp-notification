@@ -328,6 +328,193 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* ====== CHAT WIDGET ====== */
+        #chatWidget {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        #chatToggleBtn {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: #25D366;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 18px rgba(37,211,102,0.45);
+            font-size: 26px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            flex-shrink: 0;
+        }
+        #chatToggleBtn:hover { transform: scale(1.08); box-shadow: 0 6px 22px rgba(37,211,102,0.6); }
+        #chatPanel {
+            width: 320px;
+            height: 450px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 12px;
+            transform-origin: bottom right;
+            animation: chatSlideIn 0.2s ease;
+        }
+        @keyframes chatSlideIn {
+            from { opacity: 0; transform: scale(0.92) translateY(10px); }
+            to   { opacity: 1; transform: scale(1)   translateY(0); }
+        }
+        #chatPanel.open { display: flex; }
+        .chat-header {
+            background: linear-gradient(135deg, #25D366, #20ba5a);
+            color: white;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .chat-header h4 { margin: 0; font-size: 15px; font-weight: 700; }
+        .chat-header-sub { font-size: 11px; opacity: 0.85; margin-top: 2px; }
+        .chat-close-btn { background: none; border: none; color: white; font-size: 18px; cursor: pointer; line-height: 1; padding: 2px 4px; border-radius: 4px; }
+        .chat-close-btn:hover { background: rgba(255,255,255,0.2); }
+
+        #chatStartScreen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 28px 24px;
+            gap: 12px;
+        }
+        #chatStartScreen .chat-start-icon { font-size: 40px; }
+        #chatStartScreen p { color: #666; font-size: 13px; text-align: center; margin: 0; }
+        #chatPhoneInput {
+            width: 100%;
+            padding: 11px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        #chatPhoneInput:focus { border-color: #25D366; }
+        #chatStartBtn {
+            width: 100%;
+            padding: 12px;
+            background: #25D366;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        #chatStartBtn:hover { background: #20ba5a; }
+        #chatStartErr { color: #ef4444; font-size: 12px; min-height: 16px; text-align: center; }
+
+        #chatActiveScreen {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .chat-subheader {
+            background: #f0fdf4;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 8px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .chat-subheader span { font-size: 12px; color: #555; font-weight: 600; }
+        .chat-end-btn {
+            font-size: 11px;
+            padding: 4px 10px;
+            background: #fee2e2;
+            color: #ef4444;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: background 0.15s;
+        }
+        .chat-end-btn:hover { background: #fecaca; }
+        #chatMessages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            background: #ece5dd;
+        }
+        .chat-bubble {
+            max-width: 82%;
+            padding: 8px 11px;
+            border-radius: 12px;
+            font-size: 13px;
+            line-height: 1.45;
+            word-break: break-word;
+            position: relative;
+        }
+        .chat-bubble.me {
+            background: #dcf8c6;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .chat-bubble.them {
+            background: white;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+        }
+        .bubble-time { font-size: 10px; color: #999; margin-top: 3px; text-align: right; }
+        .chat-empty { color: #aaa; font-size: 13px; text-align: center; margin: auto; padding: 20px; }
+        #chatInputRow {
+            display: flex;
+            gap: 8px;
+            padding: 10px 12px;
+            border-top: 1px solid #e5e7eb;
+            background: #f9fafb;
+            flex-shrink: 0;
+            align-items: center;
+        }
+        #chatMsgInput {
+            flex: 1;
+            padding: 9px 13px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 20px;
+            font-size: 13px;
+            outline: none;
+            background: white;
+            transition: border-color 0.2s;
+        }
+        #chatMsgInput:focus { border-color: #25D366; }
+        #chatSendBtn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #25D366;
+            border: none;
+            color: white;
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+        #chatSendBtn:hover { background: #20ba5a; }
     </style>
 </head>
 <body>
@@ -415,6 +602,46 @@
                 margin-top: 20px;
             ">← Back to Store</button>
         </div>
+    </div>
+
+    <!-- Floating Chat Widget (Owner Dashboard only) -->
+    <div id="chatWidget">
+        <div id="chatPanel">
+            <div class="chat-header">
+                <div>
+                    <h4>💬 WhatsApp Chat</h4>
+                    <div class="chat-header-sub" id="chatHeaderSub">Start a conversation</div>
+                </div>
+                <button class="chat-close-btn" onclick="closeChatPanel()">✕</button>
+            </div>
+
+            <!-- Phone input screen -->
+            <div id="chatStartScreen">
+                <div class="chat-start-icon">💬</div>
+                <p>Enter the WhatsApp number you want to chat with (international format, no +):</p>
+                <input id="chatPhoneInput" type="tel" placeholder="e.g. 233509632197"
+                    onkeydown="if(event.key==='Enter') startChatSession()" />
+                <div id="chatStartErr"></div>
+                <button id="chatStartBtn" onclick="startChatSession()">Start Chat →</button>
+            </div>
+
+            <!-- Active chat screen -->
+            <div id="chatActiveScreen">
+                <div class="chat-subheader">
+                    <span id="chatWithLabel">Chatting with ...</span>
+                    <button class="chat-end-btn" onclick="endChatSession()">End Session</button>
+                </div>
+                <div id="chatMessages">
+                    <div class="chat-empty">No messages yet. Send one!</div>
+                </div>
+                <div id="chatInputRow">
+                    <input id="chatMsgInput" type="text" placeholder="Type a message..."
+                        onkeydown="if(event.key==='Enter') sendChatMessage()" />
+                    <button id="chatSendBtn" onclick="sendChatMessage()">➤</button>
+                </div>
+            </div>
+        </div>
+        <button id="chatToggleBtn" onclick="toggleChatPanel()" title="Open Chat">💬</button>
     </div>
 
     <!-- Buy Modal -->
@@ -592,6 +819,7 @@
             updateDashboard();
             loadSettings();
             startWAPolling();
+            showChatWidget();
             window.scrollTo(0, 0);
         }
 
@@ -602,6 +830,7 @@
             store.style.display = 'block';
             dashboard.style.display = 'none';
             stopWAPolling();
+            hideChatWidget();
         }
 
         // WhatsApp status polling
@@ -781,6 +1010,171 @@
 
         // Initialize
         loadProducts();
+
+        // ====== CHAT WIDGET ======
+        let chatPhone = null;
+        let chatPollInterval = null;
+        let chatPanelOpen = false;
+        let chatRenderedCount = 0;
+
+        function showChatWidget() {
+            document.getElementById('chatWidget').style.display = 'flex';
+        }
+
+        function hideChatWidget() {
+            endChatSession();
+            closeChatPanel();
+            document.getElementById('chatWidget').style.display = 'none';
+        }
+
+        function toggleChatPanel() {
+            const panel = document.getElementById('chatPanel');
+            chatPanelOpen = !chatPanelOpen;
+            if (chatPanelOpen) {
+                panel.classList.add('open');
+            } else {
+                panel.classList.remove('open');
+            }
+        }
+
+        function closeChatPanel() {
+            chatPanelOpen = false;
+            document.getElementById('chatPanel').classList.remove('open');
+        }
+
+        async function startChatSession() {
+            const raw = document.getElementById('chatPhoneInput').value;
+            const phone = raw.replace(/\D/g, '');
+            const errEl = document.getElementById('chatStartErr');
+            if (!phone || phone.length < 7) {
+                errEl.textContent = '⚠️ Enter a valid international number.';
+                return;
+            }
+            errEl.textContent = '';
+
+            const btn = document.getElementById('chatStartBtn');
+            btn.textContent = 'Starting...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/chat/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    errEl.textContent = data.error || 'Failed to start chat.';
+                    btn.textContent = 'Start Chat →';
+                    btn.disabled = false;
+                    return;
+                }
+            } catch (e) {
+                errEl.textContent = 'Network error. Try again.';
+                btn.textContent = 'Start Chat →';
+                btn.disabled = false;
+                return;
+            }
+
+            chatPhone = phone;
+            chatRenderedCount = 0;
+            document.getElementById('chatWithLabel').textContent = `+${phone}`;
+            document.getElementById('chatHeaderSub').textContent = `+${phone}`;
+            document.getElementById('chatStartScreen').style.display = 'none';
+            document.getElementById('chatActiveScreen').style.display = 'flex';
+            document.getElementById('chatMessages').innerHTML = '<div class="chat-empty">No messages yet. Send one!</div>';
+            btn.textContent = 'Start Chat →';
+            btn.disabled = false;
+
+            chatPollInterval = setInterval(pollChatMessages, 2000);
+        }
+
+        async function pollChatMessages() {
+            if (!chatPhone) return;
+            try {
+                const res = await fetch(`/api/chat/messages?phone=${chatPhone}`);
+                const data = await res.json();
+                if (!data.success) return;
+                if (data.messages.length === chatRenderedCount) return;
+                renderChatMessages(data.messages);
+                chatRenderedCount = data.messages.length;
+            } catch (e) {}
+        }
+
+        function renderChatMessages(msgs) {
+            const box = document.getElementById('chatMessages');
+            if (msgs.length === 0) {
+                box.innerHTML = '<div class="chat-empty">No messages yet. Send one!</div>';
+                return;
+            }
+            box.innerHTML = msgs.map(m => {
+                const t = new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                return `<div class="chat-bubble ${m.from}">
+                    ${escHtml(m.text)}
+                    <div class="bubble-time">${t}</div>
+                </div>`;
+            }).join('');
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function escHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\n/g, '<br>');
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chatMsgInput');
+            const text = input.value.trim();
+            if (!text || !chatPhone) return;
+            input.value = '';
+
+            const sendBtn = document.getElementById('chatSendBtn');
+            sendBtn.disabled = true;
+
+            try {
+                const res = await fetch('/api/chat/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: chatPhone, message: text })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    await pollChatMessages();
+                } else {
+                    alert('Send failed: ' + (data.error || 'Unknown error'));
+                    input.value = text;
+                }
+            } catch (e) {
+                alert('Network error. Try again.');
+                input.value = text;
+            }
+
+            sendBtn.disabled = false;
+            input.focus();
+        }
+
+        async function endChatSession() {
+            if (chatPollInterval) { clearInterval(chatPollInterval); chatPollInterval = null; }
+            if (chatPhone) {
+                try {
+                    await fetch('/api/chat/end', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phone: chatPhone })
+                    });
+                } catch (e) {}
+                chatPhone = null;
+            }
+            chatRenderedCount = 0;
+            document.getElementById('chatPhoneInput').value = '';
+            document.getElementById('chatStartErr').textContent = '';
+            document.getElementById('chatStartScreen').style.display = 'flex';
+            document.getElementById('chatActiveScreen').style.display = 'none';
+            document.getElementById('chatHeaderSub').textContent = 'Start a conversation';
+        }
     </script>
 </body>
 </html>

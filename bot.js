@@ -13,6 +13,9 @@ let sock = null;
 let currentQR = null;
 let botStatus = 'disconnected';
 
+// Chat sessions: phone -> { messages: [], startedAt }
+const chatSessions = new Map();
+
 // Owner phone loaded from OWNER_PHONE secret (set via Replit Secrets)
 let OWNER_PHONE = process.env.OWNER_PHONE || '';
 
@@ -54,6 +57,24 @@ async function startBot() {
         });
 
         sock.ev.on('creds.update', saveCreds);
+
+        sock.ev.on('messages.upsert', async ({ messages, type }) => {
+            if (type !== 'notify') return;
+            for (const msg of messages) {
+                if (msg.key.fromMe) continue;
+                const jid = msg.key.remoteJid;
+                if (!jid || !jid.endsWith('@s.whatsapp.net')) continue;
+                const phone = jid.split('@')[0].split(':')[0];
+                const text = msg.message?.conversation
+                    || msg.message?.extendedTextMessage?.text
+                    || null;
+                if (!text) continue;
+                if (chatSessions.has(phone)) {
+                    chatSessions.get(phone).messages.push({ from: 'them', text, time: Date.now() });
+                    console.log(`💬 Incoming chat from ${phone}: ${text}`);
+                }
+            }
+        });
 
     } catch (error) {
         console.error('Bot error:', error);
@@ -320,6 +341,50 @@ async function sendOwnerNotification(order) {
         return false;
     }
 }
+
+// CHAT API
+app.post('/api/chat/start', (req, res) => {
+    const { phone } = req.body;
+    if (!phone || !/^\d{7,}$/.test(phone)) {
+        return res.json({ success: false, error: 'Invalid phone number' });
+    }
+    chatSessions.set(phone, { messages: [], startedAt: Date.now() });
+    console.log(`💬 Chat session started with ${phone}`);
+    res.json({ success: true });
+});
+
+app.get('/api/chat/messages', (req, res) => {
+    const { phone } = req.query;
+    const session = chatSessions.get(phone);
+    if (!session) return res.json({ success: false, messages: [] });
+    res.json({ success: true, messages: session.messages });
+});
+
+app.post('/api/chat/send', async (req, res) => {
+    const { phone, message } = req.body;
+    if (!phone || !message) return res.json({ success: false, error: 'Missing phone or message' });
+    if (!sock || botStatus !== 'connected') {
+        return res.json({ success: false, error: 'WhatsApp not connected' });
+    }
+    try {
+        const jid = `${phone}@s.whatsapp.net`;
+        await sock.sendMessage(jid, { text: message });
+        if (chatSessions.has(phone)) {
+            chatSessions.get(phone).messages.push({ from: 'me', text: message, time: Date.now() });
+        }
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Chat send error:', e.message);
+        res.json({ success: false, error: e.message });
+    }
+});
+
+app.post('/api/chat/end', (req, res) => {
+    const { phone } = req.body;
+    if (phone) chatSessions.delete(phone);
+    console.log(`💬 Chat session ended with ${phone}`);
+    res.json({ success: true });
+});
 
 // INFO PAGE
 app.get('/info', (req, res) => {
