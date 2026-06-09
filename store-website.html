@@ -386,14 +386,18 @@
 
             <!-- Settings -->
             <div style="background:#f8f9ff;border:2px solid #667eea;border-radius:12px;padding:24px;margin-top:28px;">
-                <h3 style="color:#333;margin:0 0 16px;">⚙️ Settings</h3>
+                <h3 style="color:#333;margin:0 0 4px;">⚙️ Settings</h3>
+                <p style="font-size:13px;color:#999;margin:0 0 16px;">The number that receives WhatsApp order notifications.</p>
                 <label style="display:block;font-size:14px;font-weight:600;color:#555;margin-bottom:6px;">Owner WhatsApp Number</label>
-                <p style="font-size:12px;color:#999;margin:0 0 10px;">Enter in international format without the + sign (e.g. 233505867992)</p>
+                <p style="font-size:12px;color:#aaa;margin:0 0 10px;">International format, no + sign (e.g. 233505867992)</p>
                 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                     <input id="ownerPhoneInput" type="tel" placeholder="e.g. 233505867992"
-                        style="flex:1;min-width:200px;padding:11px 14px;border:2px solid #e0e0e0;border-radius:8px;font-size:15px;outline:none;">
-                    <button onclick="saveOwnerPhone()" style="padding:11px 22px;background:#667eea;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:14px;white-space:nowrap;">
+                        style="flex:1;min-width:200px;padding:11px 14px;border:2px solid #e0e0e0;border-radius:8px;font-size:15px;outline:none;transition:background 0.2s;">
+                    <button id="savePhoneBtn" onclick="saveOwnerPhone()" style="padding:11px 22px;background:#667eea;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:14px;white-space:nowrap;">
                         Save Number
+                    </button>
+                    <button id="resetBtn" onclick="resetSession()" style="display:none;padding:11px 22px;background:#ef4444;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:14px;white-space:nowrap;">
+                        🔄 Reset Number
                     </button>
                 </div>
                 <div id="settingsMsg" style="margin-top:10px;font-size:13px;display:none;"></div>
@@ -586,6 +590,7 @@
             store.style.display = 'none';
             dashboard.style.display = 'block';
             updateDashboard();
+            loadSettings();
             startWAPolling();
             window.scrollTo(0, 0);
         }
@@ -612,6 +617,93 @@
             }
         }
 
+        // Load settings from server
+        async function loadSettings() {
+            try {
+                const res = await fetch('/api/settings');
+                const data = await res.json();
+                const input = document.getElementById('ownerPhoneInput');
+                if (data.ownerPhone) input.value = data.ownerPhone;
+                updateSettingsLock(data.botStatus === 'connected');
+            } catch (e) {
+                console.error('Settings load error:', e);
+            }
+        }
+
+        // Lock or unlock the settings panel
+        function updateSettingsLock(isConnected) {
+            const input = document.getElementById('ownerPhoneInput');
+            const saveBtn = document.getElementById('savePhoneBtn');
+            const resetBtn = document.getElementById('resetBtn');
+
+            if (isConnected) {
+                input.disabled = true;
+                input.style.background = '#f0f0f0';
+                input.style.color = '#888';
+                input.style.cursor = 'not-allowed';
+                saveBtn.style.display = 'none';
+                resetBtn.style.display = 'inline-block';
+            } else {
+                input.disabled = false;
+                input.style.background = 'white';
+                input.style.color = '#333';
+                input.style.cursor = 'text';
+                saveBtn.style.display = 'inline-block';
+                resetBtn.style.display = 'none';
+            }
+        }
+
+        // Save owner phone number
+        async function saveOwnerPhone() {
+            const phone = document.getElementById('ownerPhoneInput').value.trim();
+            const msg = document.getElementById('settingsMsg');
+            if (!phone) {
+                showSettingsMsg('Please enter a phone number.', '#ef4444');
+                return;
+            }
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ownerPhone: phone })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showSettingsMsg('✅ Number saved! You will receive notifications at +' + data.ownerPhone, '#25D366');
+                } else {
+                    showSettingsMsg('❌ ' + data.error, '#ef4444');
+                }
+            } catch (e) {
+                showSettingsMsg('❌ Could not save. Try again.', '#ef4444');
+            }
+        }
+
+        // Reset WhatsApp session
+        async function resetSession() {
+            if (!confirm('This will disconnect WhatsApp and clear the session. You will need to scan a new QR code. Continue?')) return;
+            try {
+                const res = await fetch('/api/reset', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('ownerPhoneInput').value = '';
+                    updateSettingsLock(false);
+                    showSettingsMsg('🔄 Session reset. Enter a new number and scan the QR code.', '#667eea');
+                    startWAPolling();
+                }
+            } catch (e) {
+                showSettingsMsg('❌ Reset failed. Try again.', '#ef4444');
+            }
+        }
+
+        // Show a message in the settings panel
+        function showSettingsMsg(text, color) {
+            const msg = document.getElementById('settingsMsg');
+            msg.textContent = text;
+            msg.style.color = color;
+            msg.style.display = 'block';
+            setTimeout(() => { msg.style.display = 'none'; }, 5000);
+        }
+
         async function loadWAStatus() {
             try {
                 const res = await fetch('/api/qr-image');
@@ -625,6 +717,7 @@
                     el.innerHTML = `<div style="font-size:48px;margin-bottom:8px;">✅</div>
                         <p style="color:#25D366;font-weight:bold;font-size:18px;margin:0;">WhatsApp Connected</p>
                         <p style="color:#666;font-size:13px;margin:6px 0 0;">Order notifications are active</p>`;
+                    updateSettingsLock(true);
                     stopWAPolling();
                 } else if (data.success && data.dataURL) {
                     section.style.borderColor = '#f59e0b';

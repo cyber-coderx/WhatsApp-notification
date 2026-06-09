@@ -128,10 +128,13 @@ app.get('/api/bot-status', (req, res) => {
 
 // Settings: get/update owner phone
 app.get('/api/settings', (req, res) => {
-    res.json({ success: true, ownerPhone: OWNER_PHONE });
+    res.json({ success: true, ownerPhone: OWNER_PHONE, botStatus });
 });
 
 app.post('/api/settings', (req, res) => {
+    if (botStatus === 'connected') {
+        return res.status(403).json({ success: false, error: 'WhatsApp is currently connected. Reset first to change the number.' });
+    }
     const { ownerPhone } = req.body;
     if (!ownerPhone || ownerPhone.trim().length < 7) {
         return res.status(400).json({ success: false, error: 'Please enter a valid phone number.' });
@@ -139,6 +142,27 @@ app.post('/api/settings', (req, res) => {
     OWNER_PHONE = ownerPhone.trim().replace(/^\+/, '');
     console.log(`✅ Owner phone updated to: ${OWNER_PHONE}`);
     res.json({ success: true, ownerPhone: OWNER_PHONE });
+});
+
+// Reset: disconnect WhatsApp session and start fresh
+app.post('/api/reset', async (req, res) => {
+    console.log('🔄 Resetting WhatsApp session...');
+    try {
+        if (sock) {
+            sock.ev.removeAllListeners();
+            await sock.logout().catch(() => {});
+            sock = null;
+        }
+    } catch (e) {}
+
+    currentQR = null;
+    botStatus = 'disconnected';
+    OWNER_PHONE = '';
+
+    fs.rmSync('auth_info', { recursive: true, force: true });
+    console.log('🗑️ Session cleared. Restarting bot for fresh QR...');
+    setTimeout(startBot, 1000);
+    res.json({ success: true, message: 'Session reset. Enter a new number and scan the QR code.' });
 });
 
 // QR code as data URL (for embedding in dashboard)
