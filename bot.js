@@ -13,8 +13,8 @@ let sock = null;
 let currentQR = null;
 let botStatus = 'disconnected';
 
-// YOUR WHATSAPP NUMBER (Set this!)
-let OWNER_PHONE = process.env.OWNER_PHONE || "233509632197";
+// Owner phone loaded from OWNER_PHONE secret (set via Replit Secrets)
+let OWNER_PHONE = process.env.OWNER_PHONE || '';
 
 // Initialize bot
 async function startBot() {
