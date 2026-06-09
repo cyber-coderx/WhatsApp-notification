@@ -276,7 +276,30 @@ async function sendOwnerNotification(order) {
     try {
         const formattedPhone = OWNER_PHONE.includes('@') ? OWNER_PHONE : `${OWNER_PHONE}@s.whatsapp.net`;
         console.log(`📤 Sending notification to: ${formattedPhone}`);
-        const message = `🛒 *NEW ORDER RECEIVED!*\n\n📦 Product: ${order.product}\n👤 Customer: ${order.customerName}\n📞 Phone: ${order.phone}\n📊 Quantity: ${order.quantity}\n💰 Price Each: $${order.price}\n💵 Total: $${order.total}\n\n✅ Order ID: ${order.id}\n🕐 Time: ${new Date(order.timestamp).toLocaleString()}\n\nThank you for your business! 🙏`;
+        const message = [
+            `━━━━━━━━━━━━━━━━━━━━━━`,
+            `🛒 *NEW ORDER RECEIVED*`,
+            `━━━━━━━━━━━━━━━━━━━━━━`,
+            ``,
+            `> 🆔 Order: \`${order.id}\``,
+            ``,
+            `*📦 Product Details*`,
+            `- Product: *${order.product}*`,
+            `- Quantity: *${order.quantity}*`,
+            `- Price Each: *$${Number(order.price).toFixed(2)}*`,
+            `- *Total: $${Number(order.total).toFixed(2)}*`,
+            ``,
+            `*👤 Customer Details*`,
+            `- Name: *${order.customerName}*`,
+            `- Phone: *${order.phone}*`,
+            ``,
+            `*🕐 Time*`,
+            `- ${new Date(order.timestamp).toLocaleString('en-GB', { dateStyle: 'full', timeStyle: 'short' })}`,
+            ``,
+            `━━━━━━━━━━━━━━━━━━━━━━`,
+            `_Thank you for using My Store 🙏_`,
+            `━━━━━━━━━━━━━━━━━━━━━━`,
+        ].join('\n');
 
         await sock.sendMessage(formattedPhone, { text: message });
         console.log(`✅ WhatsApp notification sent for order ${order.id}`);
