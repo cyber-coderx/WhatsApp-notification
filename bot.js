@@ -126,6 +126,20 @@ app.get('/api/bot-status', (req, res) => {
     res.json({ status: botStatus, hasQR: !!currentQR });
 });
 
+// QR code as data URL (for embedding in dashboard)
+app.get('/api/qr-image', async (req, res) => {
+    if (!currentQR) {
+        return res.json({ success: false, status: botStatus });
+    }
+    try {
+        const QRCode = require("qrcode");
+        const dataURL = await QRCode.toDataURL(currentQR, { width: 260, margin: 2 });
+        res.json({ success: true, dataURL, status: botStatus });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // STORE WEBSITE
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/store-website.html', (err) => {

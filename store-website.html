@@ -324,13 +324,17 @@
             padding: 40px 20px;
             color: #999;
         }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <!-- Navigation -->
     <div class="navbar">
         <h1>🛒 My Store</h1>
-        <a href="#owner-dashboard">Owner Dashboard</a>
+        <a href="#" onclick="openDashboard(); return false;">Owner Dashboard</a>
     </div>
 
     <div class="container">
@@ -345,7 +349,16 @@
         <!-- Stats Section -->
         <div class="stats-panel" id="owner-dashboard" style="display: none;">
             <h2 style="color: #333; margin-bottom: 20px;">📊 Owner Dashboard</h2>
-            
+
+            <!-- WhatsApp Connection -->
+            <div id="waSection" style="background:#f0f9f3;border:2px solid #25D366;border-radius:12px;padding:24px;margin-bottom:28px;text-align:center;">
+                <h3 style="color:#333;margin:0 0 16px;">📱 WhatsApp Bot</h3>
+                <div id="waStatus">
+                    <div style="display:inline-block;width:32px;height:32px;border:4px solid #eee;border-top:4px solid #25D366;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:12px;"></div>
+                    <p style="color:#666;margin:0;">Checking connection...</p>
+                </div>
+            </div>
+
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-number" id="totalOrders">0</div>
@@ -546,47 +559,113 @@
             msg.className = `message ${type}`;
         }
 
-        // Toggle dashboard
-        function toggleDashboard() {
+        let waPollingInterval = null;
+
+        // Open dashboard
+        function openDashboard() {
+            const store = document.querySelector('.container > div:first-child');
             const dashboard = document.getElementById('owner-dashboard');
-            dashboard.style.display = dashboard.style.display === 'none' ? 'block' : 'none';
-            
-            if (dashboard.style.display === 'block') {
-                updateDashboard();
+            store.style.display = 'none';
+            dashboard.style.display = 'block';
+            updateDashboard();
+            startWAPolling();
+            window.scrollTo(0, 0);
+        }
+
+        // Toggle dashboard (back to store)
+        function toggleDashboard() {
+            const store = document.querySelector('.container > div:first-child');
+            const dashboard = document.getElementById('owner-dashboard');
+            store.style.display = 'block';
+            dashboard.style.display = 'none';
+            stopWAPolling();
+        }
+
+        // WhatsApp status polling
+        function startWAPolling() {
+            loadWAStatus();
+            waPollingInterval = setInterval(loadWAStatus, 4000);
+        }
+
+        function stopWAPolling() {
+            if (waPollingInterval) {
+                clearInterval(waPollingInterval);
+                waPollingInterval = null;
             }
         }
 
-        // Update dashboard
-        function updateDashboard() {
-            document.getElementById('totalOrders').textContent = orders.length;
-            
-            const totalRev = orders.reduce((sum, o) => sum + o.total, 0).toFixed(2);
-            document.getElementById('totalRevenue').textContent = '$' + totalRev;
+        async function loadWAStatus() {
+            try {
+                const res = await fetch('/api/qr-image');
+                const data = await res.json();
+                const el = document.getElementById('waStatus');
+                const section = document.getElementById('waSection');
 
-            const today = new Date().toDateString();
-            const todayRev = orders
-                .filter(o => new Date(o.timestamp).toDateString() === today)
-                .reduce((sum, o) => sum + o.total, 0)
-                .toFixed(2);
-            document.getElementById('todayRevenue').textContent = '$' + todayRev;
-
-            const ordersList = document.getElementById('ordersList');
-            if (orders.length === 0) {
-                ordersList.innerHTML = '<div class="empty-state">📭 No orders yet</div>';
-                return;
+                if (data.status === 'connected') {
+                    section.style.borderColor = '#25D366';
+                    section.style.background = '#f0f9f3';
+                    el.innerHTML = `<div style="font-size:48px;margin-bottom:8px;">✅</div>
+                        <p style="color:#25D366;font-weight:bold;font-size:18px;margin:0;">WhatsApp Connected</p>
+                        <p style="color:#666;font-size:13px;margin:6px 0 0;">Order notifications are active</p>`;
+                    stopWAPolling();
+                } else if (data.success && data.dataURL) {
+                    section.style.borderColor = '#f59e0b';
+                    section.style.background = '#fffbeb';
+                    el.innerHTML = `
+                        <p style="color:#92400e;font-size:13px;margin:0 0 12px;">Scan with WhatsApp to receive order notifications</p>
+                        <img src="${data.dataURL}" alt="QR Code" style="width:200px;height:200px;border-radius:8px;border:4px solid white;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+                        <ol style="text-align:left;font-size:13px;color:#555;margin:14px 0 0;padding-left:20px;">
+                            <li>Open <strong>WhatsApp</strong> on your phone</li>
+                            <li>Tap <strong>Menu ⋮</strong> → <strong>Linked Devices</strong></li>
+                            <li>Tap <strong>Link a Device</strong> and scan</li>
+                        </ol>
+                        <p style="font-size:12px;color:#aaa;margin:10px 0 0;">QR refreshes automatically</p>`;
+                } else {
+                    section.style.borderColor = '#e5e7eb';
+                    section.style.background = '#f9fafb';
+                    el.innerHTML = `<div style="display:inline-block;width:28px;height:28px;border:4px solid #eee;border-top:4px solid #25D366;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:10px;"></div>
+                        <p style="color:#666;margin:0;font-size:14px;">Connecting to WhatsApp...</p>`;
+                }
+            } catch (e) {
+                console.error('WA status error:', e);
             }
+        }
 
-            ordersList.innerHTML = orders.map(o => `
-                <div class="order-item">
-                    <div class="order-item-header">
-                        <span class="order-item-name">${o.product}</span>
-                        <span class="order-item-price">$${o.total}</span>
+        // Update dashboard stats & orders from server
+        async function updateDashboard() {
+            try {
+                const res = await fetch('/api/orders');
+                const data = await res.json();
+                const serverOrders = data.orders || [];
+
+                document.getElementById('totalOrders').textContent = data.count || 0;
+                document.getElementById('totalRevenue').textContent = '$' + (data.totalRevenue || '0.00');
+
+                const today = new Date().toDateString();
+                const todayRev = serverOrders
+                    .filter(o => new Date(o.timestamp).toDateString() === today)
+                    .reduce((sum, o) => sum + o.total, 0).toFixed(2);
+                document.getElementById('todayRevenue').textContent = '$' + todayRev;
+
+                const ordersList = document.getElementById('ordersList');
+                if (serverOrders.length === 0) {
+                    ordersList.innerHTML = '<div class="empty-state">📭 No orders yet</div>';
+                    return;
+                }
+                ordersList.innerHTML = serverOrders.map(o => `
+                    <div class="order-item">
+                        <div class="order-item-header">
+                            <span class="order-item-name">${o.product}</span>
+                            <span class="order-item-price">$${o.total}</span>
+                        </div>
+                        <div class="order-item-customer">👤 ${o.customerName}</div>
+                        <div class="order-item-customer">📦 Qty: ${o.quantity}</div>
+                        <div class="order-item-status">${o.status}</div>
                     </div>
-                    <div class="order-item-customer">👤 ${o.customer}</div>
-                    <div class="order-item-customer">📦 Qty: ${o.quantity}</div>
-                    <div class="order-item-status">${o.status}</div>
-                </div>
-            `).join('');
+                `).join('');
+            } catch (e) {
+                console.error('Dashboard update error:', e);
+            }
         }
 
         // Initialize
