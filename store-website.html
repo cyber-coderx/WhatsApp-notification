@@ -384,6 +384,21 @@
                 </div>
             </div>
 
+            <!-- Settings -->
+            <div style="background:#f8f9ff;border:2px solid #667eea;border-radius:12px;padding:24px;margin-top:28px;">
+                <h3 style="color:#333;margin:0 0 16px;">⚙️ Settings</h3>
+                <label style="display:block;font-size:14px;font-weight:600;color:#555;margin-bottom:6px;">Owner WhatsApp Number</label>
+                <p style="font-size:12px;color:#999;margin:0 0 10px;">Enter in international format without the + sign (e.g. 233505867992)</p>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <input id="ownerPhoneInput" type="tel" placeholder="e.g. 233505867992"
+                        style="flex:1;min-width:200px;padding:11px 14px;border:2px solid #e0e0e0;border-radius:8px;font-size:15px;outline:none;">
+                    <button onclick="saveOwnerPhone()" style="padding:11px 22px;background:#667eea;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:14px;white-space:nowrap;">
+                        Save Number
+                    </button>
+                </div>
+                <div id="settingsMsg" style="margin-top:10px;font-size:13px;display:none;"></div>
+            </div>
+
             <button onclick="toggleDashboard()" style="
                 width: 100%;
                 padding: 12px;
@@ -394,7 +409,7 @@
                 font-weight: bold;
                 cursor: pointer;
                 margin-top: 20px;
-            ">Back to Store</button>
+            ">← Back to Store</button>
         </div>
     </div>
 

@@ -14,7 +14,7 @@ let currentQR = null;
 let botStatus = 'disconnected';
 
 // YOUR WHATSAPP NUMBER (Set this!)
-const OWNER_PHONE = process.env.OWNER_PHONE || "233509632197";
+let OWNER_PHONE = process.env.OWNER_PHONE || "233509632197";
 
 // Initialize bot
 async function startBot() {
@@ -124,6 +124,21 @@ app.get('/qr', async (req, res) => {
 // Bot status API
 app.get('/api/bot-status', (req, res) => {
     res.json({ status: botStatus, hasQR: !!currentQR });
+});
+
+// Settings: get/update owner phone
+app.get('/api/settings', (req, res) => {
+    res.json({ success: true, ownerPhone: OWNER_PHONE });
+});
+
+app.post('/api/settings', (req, res) => {
+    const { ownerPhone } = req.body;
+    if (!ownerPhone || ownerPhone.trim().length < 7) {
+        return res.status(400).json({ success: false, error: 'Please enter a valid phone number.' });
+    }
+    OWNER_PHONE = ownerPhone.trim().replace(/^\+/, '');
+    console.log(`✅ Owner phone updated to: ${OWNER_PHONE}`);
+    res.json({ success: true, ownerPhone: OWNER_PHONE });
 });
 
 // QR code as data URL (for embedding in dashboard)
