@@ -274,8 +274,19 @@ async function sendOwnerNotification(order) {
     }
 
     try {
-        const formattedPhone = OWNER_PHONE.includes('@') ? OWNER_PHONE : `${OWNER_PHONE}@s.whatsapp.net`;
-        console.log(`📤 Sending notification to: ${formattedPhone}`);
+        const rawPhone = OWNER_PHONE.replace(/^\+/, '').replace(/\s+/g, '');
+
+        // Verify the number exists on WhatsApp and get the correct JID
+        console.log(`🔍 Verifying ${rawPhone} on WhatsApp...`);
+        const [result] = await sock.onWhatsApp(rawPhone);
+        if (!result || !result.exists) {
+            console.log(`❌ Number ${rawPhone} is not registered on WhatsApp — notification not sent.`);
+            return false;
+        }
+
+        const jid = result.jid;
+        console.log(`📤 Sending notification to verified JID: ${jid}`);
+
         const message = [
             `━━━━━━━━━━━━━━━━━━━━━━`,
             `🛒 *NEW ORDER RECEIVED*`,
@@ -301,11 +312,11 @@ async function sendOwnerNotification(order) {
             `━━━━━━━━━━━━━━━━━━━━━━`,
         ].join('\n');
 
-        await sock.sendMessage(formattedPhone, { text: message });
+        await sock.sendMessage(jid, { text: message });
         console.log(`✅ WhatsApp notification sent for order ${order.id}`);
         return true;
     } catch (error) {
-        console.error('Error sending notification:', error);
+        console.error('❌ Error sending notification:', error.message || error);
         return false;
     }
 }
