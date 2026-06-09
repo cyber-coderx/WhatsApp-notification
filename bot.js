@@ -12,7 +12,7 @@ const orders = [];
 let sock = null;
 
 // YOUR WHATSAPP NUMBER (Set this!)
-const OWNER_PHONE = process.env.OWNER_PHONE || "15551234567"; // Replace with your number
+const OWNER_PHONE = process.env.OWNER_PHONE || "233505867992"; // Replace with your number
 
 // Initialize bot
 async function startBot() {
