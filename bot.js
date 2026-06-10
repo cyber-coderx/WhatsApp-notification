@@ -19,6 +19,9 @@ const chatSessions = new Map();
 // In-memory message store so getMessage can decrypt messages from new contacts
 const msgStore = new Map(); // jid -> Map<msgId, message>
 
+// LID -> phone mapping (WhatsApp multi-device sends messages with @lid JIDs)
+const lidToPhone = new Map(); // lid string -> phone string e.g. "20147976855694" -> "233505867991"
+
 function storeMsgForRetry(msg) {
     const jid = msg.key?.remoteJid;
     if (!jid || !msg.message) return;
@@ -89,6 +92,23 @@ async function startBot() {
 
         sock.ev.on('creds.update', saveCreds);
 
+        // Build LID->phone map so we can resolve @lid JIDs to real phone numbers
+        const mapContacts = (contacts) => {
+            let mapped = 0;
+            for (const c of contacts) {
+                const phone = (c.id || '').split('@')[0].split(':')[0];
+                const lid   = (c.lid || '').split('@')[0].split(':')[0];
+                if (phone && lid) {
+                    lidToPhone.set(lid, phone);
+                    mapped++;
+                }
+            }
+            if (mapped > 0) console.log(`📇 Mapped ${mapped} LID contacts (total: ${lidToPhone.size})`);
+        };
+        sock.ev.on('contacts.set',    ({ contacts }) => mapContacts(contacts));
+        sock.ev.on('contacts.upsert', (contacts)     => mapContacts(contacts));
+        sock.ev.on('contacts.update', (updates)      => mapContacts(updates));
+
         sock.ev.on('messages.upsert', async ({ messages, type }) => {
             console.log(`🔔 messages.upsert fired — type:${type} count:${messages.length}`);
 
@@ -101,13 +121,37 @@ async function startBot() {
                 console.log(`  ↳ jid:${jid} fromMe:${fromMe} keys:[${msgKeys.join(',')}]`);
 
                 if (fromMe) continue;
-
-                // Accept both @s.whatsapp.net (individuals) and @g.us (groups — skip) and @lid
                 if (!jid || jid.endsWith('@g.us') || jid.endsWith('@broadcast')) continue;
 
-                const phone = jid.split('@')[0].split(':')[0];
-                const text = extractMsgText(msg);
+                // Resolve @lid JID to real phone number
+                let phone;
+                if (jid.endsWith('@lid')) {
+                    const lidId = jid.split('@')[0].split(':')[0];
+                    phone = lidToPhone.get(lidId);
+                    if (!phone) {
+                        // Use Baileys' internal LID mapping store (populated during decryption)
+                        try {
+                            const pnResult = await sock.signalRepository.lidMapping.getPNForLID(jid);
+                            if (pnResult?.pn) {
+                                phone = pnResult.pn.split('@')[0].split(':')[0];
+                                lidToPhone.set(lidId, phone);
+                                console.log(`  ↳ Resolved LID ${lidId} -> ${phone} (via signalRepository)`);
+                            } else {
+                                console.log(`  ↳ LID ${lidId} not resolvable yet — skipping`);
+                                continue;
+                            }
+                        } catch (e) {
+                            console.log(`  ↳ LID resolution failed for ${lidId}: ${e.message}`);
+                            continue;
+                        }
+                    } else {
+                        console.log(`  ↳ Resolved LID ${lidId} -> ${phone} (cached)`);
+                    }
+                } else {
+                    phone = jid.split('@')[0].split(':')[0];
+                }
 
+                const text = extractMsgText(msg);
                 console.log(`📨 Msg from ${phone} [type:${type}] text:${text ?? '(no text)'}`);
 
                 if (!text) continue;
@@ -385,13 +429,39 @@ async function sendOwnerNotification(order) {
 }
 
 // CHAT API
-app.post('/api/chat/start', (req, res) => {
+app.post('/api/chat/start', async (req, res) => {
     const { phone } = req.body;
     if (!phone || !/^\d{7,}$/.test(phone)) {
         return res.json({ success: false, error: 'Invalid phone number' });
     }
     chatSessions.set(phone, { messages: [], startedAt: Date.now() });
     console.log(`💬 Chat session started with ${phone}`);
+
+    // Proactively resolve LID so incoming replies (which use @lid JIDs) can be matched
+    if (sock && botStatus === 'connected') {
+        try {
+            const results = await sock.onWhatsApp(phone);
+            if (results && results.length > 0) {
+                const contact = results[0];
+                // Baileys v7 returns lid field alongside jid
+                if (contact.lid) {
+                    const lidId = contact.lid.split('@')[0].split(':')[0];
+                    lidToPhone.set(lidId, phone);
+                    console.log(`📇 Pre-mapped LID ${lidId} -> ${phone}`);
+                }
+                // Also map using the jid in case it differs (e.g. has device suffix)
+                if (contact.jid) {
+                    const jidPhone = contact.jid.split('@')[0].split(':')[0];
+                    if (jidPhone !== phone) {
+                        lidToPhone.set(jidPhone, phone);
+                    }
+                }
+            }
+        } catch (e) {
+            console.log(`⚠️ LID pre-map failed for ${phone}: ${e.message}`);
+        }
+    }
+
     res.json({ success: true });
 });
 
