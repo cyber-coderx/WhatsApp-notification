@@ -16,6 +16,37 @@ let botStatus = 'disconnected';
 // Chat sessions: phone -> { messages: [], startedAt }
 const chatSessions = new Map();
 
+// In-memory message store so getMessage can decrypt messages from new contacts
+const msgStore = new Map(); // jid -> Map<msgId, message>
+
+function storeMsgForRetry(msg) {
+    const jid = msg.key?.remoteJid;
+    if (!jid || !msg.message) return;
+    if (!msgStore.has(jid)) msgStore.set(jid, new Map());
+    msgStore.get(jid).set(msg.key.id, msg.message);
+}
+
+async function getMessage(key) {
+    return msgStore.get(key.remoteJid)?.get(key.id) ?? undefined;
+}
+
+function extractMsgText(msg) {
+    const m = msg.message;
+    if (!m) return null;
+    // unwrap ephemeral / view-once wrappers
+    const inner = m.ephemeralMessage?.message
+        || m.viewOnceMessage?.message
+        || m.viewOnceMessageV2?.message
+        || m.viewOnceMessageV2Extension?.message
+        || m;
+    return inner.conversation
+        || inner.extendedTextMessage?.text
+        || inner.imageMessage?.caption
+        || inner.videoMessage?.caption
+        || inner.documentMessage?.caption
+        || null;
+}
+
 // Owner phone loaded from OWNER_PHONE secret (set via Replit Secrets)
 let OWNER_PHONE = process.env.OWNER_PHONE || '';
 
@@ -24,7 +55,7 @@ async function startBot() {
     try {
         const { state, saveCreds } = await useMultiFileAuthState('auth_info');
 
-        sock = makeWASocket({ auth: state });
+        sock = makeWASocket({ auth: state, getMessage });
 
         sock.ev.on('connection.update', async (update) => {
             const { connection, lastDisconnect, qr } = update;
@@ -59,19 +90,22 @@ async function startBot() {
         sock.ev.on('creds.update', saveCreds);
 
         sock.ev.on('messages.upsert', async ({ messages, type }) => {
-            if (type !== 'notify') return;
             for (const msg of messages) {
+                storeMsgForRetry(msg);
+
                 if (msg.key.fromMe) continue;
                 const jid = msg.key.remoteJid;
                 if (!jid || !jid.endsWith('@s.whatsapp.net')) continue;
+
                 const phone = jid.split('@')[0].split(':')[0];
-                const text = msg.message?.conversation
-                    || msg.message?.extendedTextMessage?.text
-                    || null;
+                const text = extractMsgText(msg);
+
+                console.log(`📨 Msg from ${phone} [type:${type}] text:${text ?? '(no text)'}`);
+
                 if (!text) continue;
                 if (chatSessions.has(phone)) {
                     chatSessions.get(phone).messages.push({ from: 'them', text, time: Date.now() });
-                    console.log(`💬 Incoming chat from ${phone}: ${text}`);
+                    console.log(`💬 Stored chat message from ${phone}`);
                 }
             }
         });
