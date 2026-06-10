@@ -90,12 +90,20 @@ async function startBot() {
         sock.ev.on('creds.update', saveCreds);
 
         sock.ev.on('messages.upsert', async ({ messages, type }) => {
+            console.log(`🔔 messages.upsert fired — type:${type} count:${messages.length}`);
+
             for (const msg of messages) {
                 storeMsgForRetry(msg);
 
-                if (msg.key.fromMe) continue;
-                const jid = msg.key.remoteJid;
-                if (!jid || !jid.endsWith('@s.whatsapp.net')) continue;
+                const jid = msg.key.remoteJid || '';
+                const fromMe = msg.key.fromMe;
+                const msgKeys = msg.message ? Object.keys(msg.message) : [];
+                console.log(`  ↳ jid:${jid} fromMe:${fromMe} keys:[${msgKeys.join(',')}]`);
+
+                if (fromMe) continue;
+
+                // Accept both @s.whatsapp.net (individuals) and @g.us (groups — skip) and @lid
+                if (!jid || jid.endsWith('@g.us') || jid.endsWith('@broadcast')) continue;
 
                 const phone = jid.split('@')[0].split(':')[0];
                 const text = extractMsgText(msg);
