@@ -22,6 +22,9 @@ const msgStore = new Map(); // jid -> Map<msgId, message>
 // LID -> phone mapping (WhatsApp multi-device sends messages with @lid JIDs)
 const lidToPhone = new Map(); // lid string -> phone string e.g. "20147976855694" -> "233505867991"
 
+// When we send to a session phone, record it so the next @lid reply can be correlated
+const recentlySentToPhone = new Map(); // phone -> timestamp
+
 function storeMsgForRetry(msg) {
     const jid = msg.key?.remoteJid;
     if (!jid || !msg.message) return;
@@ -120,6 +123,15 @@ async function startBot() {
                 const msgKeys = msg.message ? Object.keys(msg.message) : [];
                 console.log(`  ↳ jid:${jid} fromMe:${fromMe} keys:[${msgKeys.join(',')}]`);
 
+                // Track our outgoing messages to session phones — used to correlate @lid replies
+                if (fromMe && jid.endsWith('@s.whatsapp.net')) {
+                    const sentPhone = jid.split('@')[0].split(':')[0];
+                    if (chatSessions.has(sentPhone)) {
+                        recentlySentToPhone.set(sentPhone, Date.now());
+                        console.log(`  ↳ Recorded sent-to ${sentPhone} for LID correlation`);
+                    }
+                }
+
                 if (fromMe) continue;
                 if (!jid || jid.endsWith('@g.us') || jid.endsWith('@broadcast')) continue;
 
@@ -129,23 +141,47 @@ async function startBot() {
                     const lidId = jid.split('@')[0].split(':')[0];
                     phone = lidToPhone.get(lidId);
                     if (!phone) {
-                        // Use Baileys' internal LID mapping store (populated during decryption)
+                        // 1st try: Baileys' internal LID mapping store (works if USync succeeded)
                         try {
                             const pnResult = await sock.signalRepository.lidMapping.getPNForLID(jid);
                             if (pnResult?.pn) {
                                 phone = pnResult.pn.split('@')[0].split(':')[0];
                                 lidToPhone.set(lidId, phone);
-                                console.log(`  ↳ Resolved LID ${lidId} -> ${phone} (via signalRepository)`);
-                            } else {
-                                console.log(`  ↳ LID ${lidId} not resolvable yet — skipping`);
-                                continue;
+                                console.log(`  ↳ Resolved LID ${lidId} -> ${phone} (signalRepository)`);
                             }
                         } catch (e) {
-                            console.log(`  ↳ LID resolution failed for ${lidId}: ${e.message}`);
+                            console.log(`  ↳ signalRepository lookup failed: ${e.message}`);
+                        }
+                    }
+                    if (!phone) {
+                        // 2nd try: correlate with the most recently sent-to session phone
+                        // (When owner sends to X and X replies, the reply arrives as @lid)
+                        let bestPhone = null, latestTime = 0;
+                        for (const [sentPhone, sentTime] of recentlySentToPhone.entries()) {
+                            if (chatSessions.has(sentPhone) && sentTime > latestTime) {
+                                bestPhone = sentPhone;
+                                latestTime = sentTime;
+                            }
+                        }
+                        if (bestPhone) {
+                            phone = bestPhone;
+                            lidToPhone.set(lidId, phone);
+                            console.log(`  ↳ Correlated LID ${lidId} -> ${phone} (sent-message tracker)`);
+                        }
+                    }
+                    if (!phone) {
+                        // 3rd try: if exactly one active session exists, attribute to it
+                        if (chatSessions.size === 1) {
+                            phone = [...chatSessions.keys()][0];
+                            lidToPhone.set(lidId, phone);
+                            console.log(`  ↳ Correlated LID ${lidId} -> ${phone} (sole active session)`);
+                        } else {
+                            console.log(`  ↳ LID ${lidId} unresolvable (${chatSessions.size} sessions open) — skipping`);
                             continue;
                         }
-                    } else {
-                        console.log(`  ↳ Resolved LID ${lidId} -> ${phone} (cached)`);
+                    }
+                    if (phone) {
+                        console.log(`  ↳ Using ${phone} for LID ${lidId}`);
                     }
                 } else {
                     phone = jid.split('@')[0].split(':')[0];
